@@ -15,17 +15,8 @@ Compatible with WordPress 3.2+.
 // Database setup
 require_once('modules/database_setup.php');
 
-// Co-op Day setup (e.g. Monday, Tuesday)
-require_once('modules/coop_day_setup.php');
-
-// Co-op Day setup (e.g. Monday, Tuesday)
-require_once('modules/school_year_setup.php');
-
-// Co-op Day setup (e.g. Monday, Tuesday)
-require_once('modules/stage_setup.php');
-
-// Class setup (e.g. Formal Logic, Rhetoric Science, etc.)
-require_once('modules/class_setup.php');
+// Post type setup (e.g. classes, sessions, etc.)
+require_once('modules/custom_post_types.php');
 
 // Plugin page setup for testing
 require_once('modules/plugin_page_setup.php');
