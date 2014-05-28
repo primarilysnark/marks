@@ -26,3 +26,6 @@ require_once('modules/stage_setup.php');
 
 // Class setup (e.g. Formal Logic, Rhetoric Science, etc.)
 require_once('modules/class_setup.php');
+
+// Plugin page setup for testing
+require_once('modules/plugin_page_setup.php');
