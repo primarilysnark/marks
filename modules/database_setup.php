@@ -44,9 +44,9 @@ function marks_install() {
     $sql = "CREATE TABLE ".$table_name." (
         id mediumint(9) NOT NULL AUTO_INCREMENT PRIMARY KEY,
         userId mediumint(9) NOT NULL,
-        courseId mediumint(9) NOT NULL,
         assignmentId mediumint(9) NOT NULL,
         pointsAchieved mediumint(9) NOT NULL,
+        exempt SET('Y','N') NOT NULL,
         status SET('A','I') NOT NULL,
         createdDate date NOT NULL
     );";
