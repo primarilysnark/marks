@@ -53,7 +53,7 @@ function marks_coop_day_custom_columns($column) {
 
     switch ($column) {
         case 'coop_classes':
-            $class_count = new WP_Query(array( 'post_type' => 'marks_class', 'showposts' => -1, 'meta_query' => array('key' => 'coop_day', 'value' => $post->post_title )));
+            $class_count = new WP_Query(array( 'post_type' => 'marks_class', 'showposts' => -1, 'meta_query' => array(array('key' => 'coop_day', 'value' => $post->post_title ))));
             echo $class_count->post_count;
             break;
     }

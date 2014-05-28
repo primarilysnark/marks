@@ -1,16 +1,19 @@
 <?php
 
 /* ----------------------------------------
-	  SETUP CLASSES CUSTOM POST TYPE
+ SETUP CLASS AND SESSION CUSTOM POST TYPE
 ---------------------------------------- */
 
-add_action('init', 'marks_class_register');
+add_action('init', 'marks_register');
 add_action('add_meta_boxes', 'marks_add_custom_meta_boxes');
-add_action('save_post', 'marks_save_details');
+add_action('save_post', 'marks_class_save_details');
+add_action('save_post', 'marks_session_save_details');
 add_action('manage_posts_custom_column', 'marks_class_custom_columns');
 add_filter('manage_edit-marks_class_columns', 'marks_class_edit_columns');
+add_action('manage_posts_custom_column', 'marks_session_custom_columns');
+add_filter('manage_edit-marks_session_columns', 'marks_session_edit_columns');
 
-function marks_class_register() {
+function marks_register() {
 
 	$args = array(
 		'labels' => array(
@@ -38,12 +41,39 @@ function marks_class_register() {
 	);
 
 	register_post_type( 'marks_class' , $args );
+
+	$args = array(
+		'labels' => array(
+            'name' => _x('Sessions', 'post type general name'),
+            'singular_name' => _x('Session', 'post type singular name'),
+            'add_new' => _x('Add New', 'marks_session'),
+            'add_new_item' => __('Add New Session'),
+            'edit_item' => __('Edit Session'),
+            'new_item' => __('New Session'),
+            'view_item' => __('View Session'),
+            'search_items' => __('Search Sessions'),
+            'not_found' =>  __('Nothing found'),
+            'not_found_in_trash' => __('Nothing found in Trash'),
+            'parent_item_colon' => ''
+        ),
+		'public' => true,
+		'publicly_queryable' => true,
+		'show_ui' => true,
+		'query_var' => true,
+		'rewrite' => true,
+		'capability_type' => 'post',
+		'hierarchical' => false,
+		'menu_position' => null,
+		'supports' => array('title')
+	);
+
+	register_post_type( 'marks_session' , $args );
 }
 
 function marks_add_custom_meta_boxes() {
-    add_meta_box('class_settings-meta', 'Class Settings', 'marks_class_settings_meta', 'marks_class', 'normal', 'low');
-    add_meta_box('marks-meta', 'Marks', 'marks_marks_meta', 'marks_class', 'normal', 'low');
-    add_meta_box('students-meta', 'Students', 'marks_students_meta', 'marks_class', 'normal', 'low');
+    add_meta_box('marks_class_settings-meta', 'Class Settings', 'marks_class_settings_meta', 'marks_class', 'normal', 'low');
+    add_meta_box('marks_session-meta', 'Session Details', 'marks_session_meta', 'marks_session', 'normal', 'low');
+    add_meta_box('marks_session_students-meta', 'Marks', 'marks_session_students_meta', 'marks_session', 'normal', 'low');
 }
 
 function marks_class_settings_meta() {
@@ -91,20 +121,65 @@ function marks_class_settings_meta() {
     $post = $post_saved;
 }
 
-function marks_marks_meta() {
+function marks_session_meta() {
     global $post;
+    $post_copy = $post;
     $custom_post = get_post_custom($post->ID);
-    $marks_opt_in = $custom_post['marks_opt_in'][0];
+    $school_year = $custom_post['school_year'][0];
+    $class = $custom_post['class'][0];
+    
+    $school_year_list = new WP_Query(array( 'post_type' => 'marks_school_year', 'showposts' => -1, 'order' => 'ASC' ));
+    $class_list = new WP_Query(array( 'post_type' => 'marks_class', 'showposts' => -1, 'order' => 'ASC' ));
     ?>
-    <label for="marks_marks_opt_in">Enable Marks:</label>
-    <input type="checkbox" id="marks_marks_opt_in" name="marks_marks_opt_in" <?php if ($marks_opt_in) { ?> checked="checked" <?php } ?> />
+    <table>
+        <tr>
+            <td><b><label for="marks_school_year">School Year:</label></b></td>
+            <td>
+                <select id="marks_school_year" name="marks_school_year">
+                    <option></option>
+                    <?php
+                    while ($school_year_list->have_posts()) {
+                        $school_year_list->the_post();
+                        ?>
+                        <option value="<?php the_title(); ?>" <?php if ($school_year == get_the_title()) { ?> selected <?php } ?>><?php the_title(); ?></option>
+                        <?php
+                    }
+                    ?>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td><b><label for="marks_class">Class:</label></b></td>
+            <td>
+                <select id="marks_class" name="marks_class">
+                    <option></option>
+                    <?php
+                    while ($class_list->have_posts()) {
+                        $class_list->the_post();
+                        ?>
+                        <option value="<?php the_title(); ?>" <?php if ($class == get_the_title()) { ?> selected <?php } ?>><?php the_title(); ?></option>
+                        <?php
+                    }
+                    ?>
+                </select>
+            </td>
+        </tr>
+    </table>
     <?php
+    $post = $post_copy;
 }
 
-function marks_students_meta() {
+function marks_session_students_meta() {
     global $post;
     $custom_post = get_post_custom($post->ID);
     $student_list = $custom_post['student_list'][0];
+    $marks_opt_in = $custom_post['marks_opt_in'][0];
+
+    ?>
+        <label for="marks_marks_opt_in">Enable Marks:</label>
+        <input type="checkbox" id="marks_marks_opt_in" name="marks_marks_opt_in" <?php if ($marks_opt_in) { ?> checked="checked" <?php } ?> /><br /><br />    
+    <?php
+    
     $user_list = get_users('orderby=nicename&order=ASC');
     
     foreach ($user_list as $user) {
@@ -137,9 +212,27 @@ function marks_students_meta() {
     <?php
 }
 
-function marks_save_details() {
+function marks_class_save_details() {
     global $post;
     global $wpdb;
+    $slug = 'marks_class';
+    
+    if ($slug != $_POST['post_type']) {
+        return;
+    }
+    
+    update_post_meta($post->ID, 'coop_day', $_POST['marks_coop_day']);
+    update_post_meta($post->ID, 'stage', $_POST['marks_stage']);
+}
+
+function marks_session_save_details() {
+    global $post;
+    global $wpdb;
+    $slug = 'marks_session';
+    
+    if ($slug != $_POST['post_type']) {
+        return;
+    }
     
     $marks_student_list = split(',', $_POST['marks_student_list']);
     
@@ -207,8 +300,8 @@ function marks_save_details() {
         }
     }
     
-    update_post_meta($post->ID, 'coop_day', $_POST['marks_coop_day']);
-    update_post_meta($post->ID, 'stage', $_POST['marks_stage']);
+    update_post_meta($post->ID, 'school_year', $_POST['marks_school_year']);
+    update_post_meta($post->ID, 'class', $_POST['marks_class']);
     update_post_meta($post->ID, 'marks_opt_in', $_POST['marks_marks_opt_in']);
     update_post_meta($post->ID, 'student_list', $_POST['marks_student_list']);
 }
@@ -218,9 +311,7 @@ function marks_class_edit_columns($columns) {
         'cb' => '<input type="checkbox" />',
         'title' => 'Class Name',
         'coop_day' => 'Co-op Day',
-        'stage' => 'Class Stage',
-        'marks_opt_in' => 'Uses Marks',
-        'student_count' => 'Total Students'
+        'stage' => 'Class Stage'
     );
 }
 
@@ -235,6 +326,31 @@ function marks_class_custom_columns($column) {
         case 'stage':
             echo $custom_post['stage'][0];
             break;
+    }
+}
+
+function marks_session_edit_columns($columns) {
+    return array(
+        'cb' => '<input type="checkbox" />',
+        'title' => 'Session Name',
+        'class' => 'Class',
+        'school_year' => 'School Year',
+        'marks_opt_in' => 'Uses Marks',
+        'student_count' => 'Total Students'
+    );
+}
+
+function marks_session_custom_columns($column) {
+    global $post;
+    $custom_post = get_post_custom($post->ID);
+    
+    switch ($column) {
+        case 'class':
+            echo $custom_post['class'][0];
+            break;
+        case 'school_year':
+            echo $custom_post['school_year'][0];
+            break;
         case 'marks_opt_in':
             if ($custom_post['marks_opt_in'][0]) {
                 echo 'Yes';
@@ -243,7 +359,7 @@ function marks_class_custom_columns($column) {
             }
             break;
         case 'student_count':
-            echo $custom_post['student_count'][0];
+            echo count(split(',', $custom_post['student_list'][0]));
             break;
     }
 }
