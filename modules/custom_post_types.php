@@ -312,7 +312,7 @@ function marks_session_save_details() {
         return;
     }
     
-    $marks_student_list = split(',', $_POST['marks_student_list']);
+    $marks_student_list = explode(',', $_POST['marks_student_list']);
     
     // Get list of students from database
     $db_student_list = $wpdb->get_col($wpdb->prepare("SELECT userId FROM ".$wpdb->prefix."marks_user_course_intersect WHERE courseId = %d", $post->ID));
@@ -330,51 +330,53 @@ function marks_session_save_details() {
         }
     }
     
-    // Loop through selected students
-    foreach($marks_student_list as $marks_student) {
-        
-        // Check if student exists
-        $student_exist_check = $wpdb->get_col( $wpdb->prepare(
-            "
-            SELECT userId
-            FROM ".$wpdb->prefix."marks_user_course_intersect
-            WHERE userId = %d",
-            $marks_student
-        ));
+    if ($marks_student_list[0] != "") {
+        // Loop through selected students
+        foreach($marks_student_list as $marks_student) {
 
-        // Check if student set to active
-        $student_active_check = $wpdb->get_col( $wpdb->prepare(
-            "
-            SELECT userId
-            FROM ".$wpdb->prefix."marks_user_course_intersect
-            WHERE userId = %d
-            AND status = %s",
-            $marks_student,
-            'I'
-        ));
-        
-        // If student does not exist, add student
-        if (!$student_exist_check) {
-            $wpdb->insert(
-                $wpdb->prefix . 'marks_user_course_intersect',
-                array(
-                    'userId' => $marks_student,
-                    'courseId' => $post->ID,
-                    'courseAdmin' => 'N',
-                    'status' => 'A',
-                    'createdDate' => current_time('mysql')
-                )
-            );
-        }
-        // If student not active, make student active
-        else if ($student_active_check) {
-            $student_status = $wpdb->update(
-                $wpdb->prefix . 'marks_user_course_intersect',
-                array(
-                    'status' => 'A'
-                ),
-                array('userId' => $marks_student)
-            );
+            // Check if student exists
+            $student_exist_check = $wpdb->get_col( $wpdb->prepare(
+                "
+                SELECT userId
+                FROM ".$wpdb->prefix."marks_user_course_intersect
+                WHERE userId = %d",
+                $marks_student
+            ));
+
+            // Check if student set to active
+            $student_active_check = $wpdb->get_col( $wpdb->prepare(
+                "
+                SELECT userId
+                FROM ".$wpdb->prefix."marks_user_course_intersect
+                WHERE userId = %d
+                AND status = %s",
+                $marks_student,
+                'I'
+            ));
+
+            // If student does not exist, add student
+            if (!$student_exist_check) {
+                $wpdb->insert(
+                    $wpdb->prefix . 'marks_user_course_intersect',
+                    array(
+                        'userId' => $marks_student,
+                        'courseId' => $post->ID,
+                        'courseAdmin' => 'N',
+                        'status' => 'A',
+                        'createdDate' => current_time('mysql')
+                    )
+                );
+            }
+            // If student not active, make student active
+            else if ($student_active_check) {
+                $student_status = $wpdb->update(
+                    $wpdb->prefix . 'marks_user_course_intersect',
+                    array(
+                        'status' => 'A'
+                    ),
+                    array('userId' => $marks_student)
+                );
+            }
         }
     }
     
@@ -492,7 +494,8 @@ function marks_session_custom_columns($column) {
             }
             break;
         case 'student_count':
-            echo count(split(',', $custom_post['student_list'][0]));
+            $student_list = split(',', $custom_post['student_list'][0]);
+            echo ($student_list[0] == "") ? '0' : count($student_list);
             break;
     }
 }
